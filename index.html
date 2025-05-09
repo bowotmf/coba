@@ -1,38 +1,87 @@
-async function uploadFile() {
-  const user = gapi.auth2.getAuthInstance().currentUser.get();
-  const isAuthorized = user.hasGrantedScopes(SCOPES);
-  if (!isAuthorized) {
-    document.getElementById("status").innerText = "Anda belum login atau belum memberikan izin.";
-    return;
-  }
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Upload ke Google Drive</title>
+</head>
+<body>
+  <h2>Upload File ke Google Drive</h2>
 
-  const accessToken = gapi.auth.getToken().access_token;
-  const file = document.getElementById('fileInput').files[0];
-  if (!file) {
-    document.getElementById("status").innerText = "Pilih file terlebih dahulu.";
-    return;
-  }
+  <!-- Tombol login -->
+  <button onclick="handleAuthClick()">Login dengan Google</button>
+  <br><br>
 
-  const metadata = {
-    name: file.name,
-    mimeType: file.type
-  };
+  <!-- Input file dan tombol upload -->
+  <input type="file" id="fileInput">
+  <button onclick="uploadFile()">Upload</button>
 
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  form.append('file', file);
+  <p id="status"></p>
 
-  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-    method: 'POST',
-    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
-    body: form,
-  });
+  <!-- Muat Google API -->
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script>
+    const CLIENT_ID = '1085850127078-m278l5fd1dkng3qdbjip9fanquthutuh.apps.googleusercontent.com';
+    const API_KEY = 'AIzaSyDqQgb2DS8tn8EwyZ30dF01oU2dIzVPKOw';
+    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
-  const result = await res.json();
-  if (result.id) {
-    document.getElementById("status").innerText = "Upload berhasil! ID File: " + result.id;
-  } else {
-    document.getElementById("status").innerText = "Upload gagal. Cek konsol.";
-    console.error(result);
-  }
-}
+    function handleClientLoad() {
+      gapi.load('client:auth2', async () => {
+        await gapi.client.init({
+          apiKey: API_KEY,
+          clientId: CLIENT_ID,
+          scope: SCOPES
+        });
+
+        document.getElementById("status").innerText = "Silakan login dengan Google.";
+      });
+    }
+
+    function handleAuthClick() {
+      gapi.auth2.getAuthInstance().signIn();
+    }
+
+    async function uploadFile() {
+      const user = gapi.auth2.getAuthInstance().currentUser.get();
+      const isAuthorized = user.hasGrantedScopes(SCOPES);
+      if (!isAuthorized) {
+        document.getElementById("status").innerText = "Anda belum login atau belum memberikan izin.";
+        return;
+      }
+
+      const file = document.getElementById('fileInput').files[0];
+      if (!file) {
+        document.getElementById("status").innerText = "Pilih file terlebih dahulu.";
+        return;
+      }
+
+      const accessToken = gapi.auth.getToken().access_token;
+
+      const metadata = {
+        name: file.name,
+        mimeType: file.type
+      };
+
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', file);
+
+      const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+        method: 'POST',
+        headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+        body: form,
+      });
+
+      const result = await res.json();
+      if (result.id) {
+        document.getElementById("status").innerText = "Upload berhasil! ID File: " + result.id;
+      } else {
+        document.getElementById("status").innerText = "Upload gagal. Lihat konsol.";
+        console.error(result);
+      }
+    }
+
+    // Jalankan saat halaman dimuat
+    window.onload = handleClientLoad;
+  </script>
+</body>
+</html>
